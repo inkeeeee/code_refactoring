@@ -1,0 +1,61 @@
+name: ASAN tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  asan:
+    runs-on: ubuntu-24.04
+
+    env:
+      LLVM_VERSION: 21
+      LLVM_DIR: /usr/lib/llvm-21
+      CC: clang-21
+      CXX: clang++-21
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LLVM and build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            wget \
+            gnupg \
+            software-properties-common \
+            lsb-release \
+            cmake \
+            ninja-build
+
+          wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh ${LLVM_VERSION}
+
+          sudo apt-get update
+          sudo apt-get install -y \
+            llvm-${LLVM_VERSION}-dev \
+            clang-${LLVM_VERSION} \
+            clang-tools-${LLVM_VERSION} \
+            libclang-${LLVM_VERSION}-dev \
+            libclang-cpp${LLVM_VERSION}-dev
+
+      - name: Configure ASAN build
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCT_Clang_INSTALL_DIR=${LLVM_DIR} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang-${LLVM_VERSION} \
+            -DCMAKE_CXX_COMPILER=clang++-${LLVM_VERSION} \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run refactoring fixture checks
+        run: ./check_refactor.sh
+
+      - name: Run unit tests with ASAN
+        run: ctest --test-dir build --output-on-failure

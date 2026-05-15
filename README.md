@@ -1,117 +1,146 @@
-# cpp-middle-project-sprint-8 <!-- omit in toc -->
+```bash
+sudo apt update
 
-- [Начало работы](#начало-работы)
-- [Сборка проекта и запуск тестов](#сборка-проекта-и-запуск-тестов)
-  - [Команды для сборки проекта](#команды-для-сборки-проекта)
-  - [Команды для запуска приложения](#команды-для-запуска-приложения)
+sudo apt install -y \
+  llvm-19-dev \
+  clang-19 \
+  clang-tools-19 \
+  libclang-19-dev \
+  libclang-cpp19-dev \
+  cmake \
+  g++ \
+  make \
+  perf
 
-Шаблон репозитория для практического задания 8-го спринта «Мидл разработчик С++»
 
-## До начала использования Docker контейнера: Настройка переменных окружения
-
-Для корректной работы контейнера добавьте в ваш bash-профиль две переменные окружения и обновите его, выполнив следующие команды:
+## Сборка
 
 ```bash
-# Set USER_UID and USER_GID
-echo -e '\nexport USER_UID=$(id -u)\nexport USER_GID=$(id -g)' >> ~/.bashrc
+rm -rf build
 
-# Update bash-profile
-source ~/.bashrc
+cmake -S . -B build \
+  -DCT_Clang_INSTALL_DIR=/usr/lib/llvm-19
+
+cmake --build build
 ```
 
-Перед началом работы с Docker контейнером, убедитесь, что переменные окружения доступны, внутри используемой вами IDE (например в терминале внутри VS Code):
+## Проверка основного функционала
 
 ```bash
-printf "\nUSER_UID=${USER_UID=}\nUSER_GID=${USER_GID}\n\n"
+./check_refactor.sh
 ```
 
-## Начало работы
-
-1. Убедитесь, что переменные окружения из предыдущего шага доступны внутри вашей IDE
-2. Нажмите зелёную кнопку `Use this template`, затем `Create a new repository`.
-3. Назовите свой репозиторий.
-4. Склонируйте созданный репозиторий командой `git clone your-repository-name`.
-5. Создайте новую ветку командой `git switch -c development`.
-6. Откройте проект в `Visual Studio Code`.
-7. Нажмите `F1` и откройте проект в dev-контейнере командой `Dev Containers: Reopen in Container`.
-
-![Reopen in container](misc/reopen_in_container.png)
-
-## Сборка проекта и запуск тестов
-
-Данный репозиторий использует следующие инструменты:
-
-- **cmake** — генератор систем сборки для C и C++. Позволяет создавать проекты, которые могут компилироваться на различных платформах и с различными компиляторами. Подробнее о cmake:
-  - https://dzen.ru/a/ZzZGUm-4o0u-IQlb
-  - https://neerc.ifmo.ru/wiki/index.php?title=CMake_Tutorial
-  - https://cmake.org/cmake/help/book/mastering-cmake/cmake/Help/guide/tutorial/index.html
-
-- **VS Code Dev Docker container** - Docker контейнер, который содержит полностью настроенное окружение для выполнение задания. Подробнее об этой функциональности:
-  - https://habr.com/ru/articles/822707/ - "Почти все, что вы хотели бы знать про Docker"
-  - https://code.visualstudio.com/docs/devcontainers/containers - официальная документация VS Code
-  - https://www.youtube.com/watch?v=p9L7YFqHGk4 - "Docker container for VS Code"
-  - https://www.youtube.com/watch?v=pg19Z8LL06w&t=174s&pp=ygUPRG9ja2VyY29udGFpbmVy - "Docker in 1 hour"
-
-### Команды для сборки проекта
-
-Используйте `F5` для выполнения следующих шагов:
-- Создания папки `build`
-- Вызова `cmake` команд для запуска процесса сборки
-- Запуска `lldb` отладчика
-
-Также, вы можете запустить только команду построения проекта. Для этого:
-
-- вызовите командное окно, нажав `F1`
-
-- Выберите команду `Tasks: Run Task`
-
-![](misc/select_vscode_tasks.png)
-
-- Выберите команду сборки проекта, например `GCC: Build Debug app`
-
-![](misc/select_concrete_task.png)
-
-### Команды для запуска приложения
+## Запуск unit-тестов
 
 ```bash
-cd build
-
-./refactor_tool ../tests_data/for_refactor.cpp
+./build/refactor_tool_tests
 ```
 
-Для запуска отладки нажмите `F5`, будет произведена сборка и отладка проекта.
+## Ручной запуск утилиты
 
-Для проверки Ваших изменений так же предусмотрен скрипт `check_refactor.sh`, запустив который, Вы сможете проверить базовые сценарии рафакторинга.
+```bash
+cp tests/tests_data/for_refactor.cpp /tmp/for_refactor.cpp
 
+./build/src/refactor_tool /tmp/for_refactor.cpp -- -std=c++17
 
-### Команда для запуска тестов
+cat /tmp/for_refactor.cpp
+```
 
-Для запуска тестов вы можете воспользоваться удобным расширением `C++ TestMate`:
+## Просмотр лога изменений
 
-![](misc/test_mate.png)
+```bash
+cat refactor_tool_changes.log
+```
 
-### Команда для запуска clang-format — обязательное требование перед сдачей работы на ревью
+## ASAN-сборка проекта
 
-В этом репозитории настроен автоматический запуск clang-format (файл конфигурации — .vscode/settings.json) при сохранении любого файла с кодом.
+```bash
+rm -rf build-asan
 
-Убедитесь, что эта функциональность работает:
-- Добавьте несколько пустых линий в любой файл.
-- Сохраните файл.
-- Если пустые линии были удалены, всё работает, если нет — убедитесь, что clangd работает (при открытии файла с кодом в самом низу VS Code на голубой полоске должно быть написано clangd: idle). Для этого:
-    - нажмите `F1` и выполните команду `clangd: Download language server`;
-    - нажмите `F1` и выполните команду `clangd: Restart language server`;
-    - нажмите `F1` и выполните команду `Developer: Reload Window`.
+cmake -S . -B build-asan \
+  -DCT_Clang_INSTALL_DIR=/usr/lib/llvm-19 \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
 
-### Команды для запуска отладчика
+cmake --build build-asan
+```
 
-В Visual Studio Code настройки параметров для запуска отладчика находятся в файле .vscode/launch.json. Поскольку в этом файле для запуска приложения уже есть одна конфигурация `Launch *`, то для запуска отладчика достаточно нажать F5 или открыть окно Run and Debug комбинацией клавиш `Ctrl+Shift+D`.
+Запуск ASAN unit-тестов:
 
-## Дополнительно
+```bash
+./build-asan/refactor_tool_tests
+```
 
-Для настройки автодополнения `Ctrl + Space` нажмите `F1` и выполните команду `clangd: Download language server`. VS Code сам предложит установить подходящую версию clangd (всплывашка в правом нижнем углу). После завершения установки перезагрузите окно кнопкой перезапуска справа снизу или с помощью `F1` и выполните команду `Developer: Reload Window`.
+Если тестовый бинарь лежит в другом месте:
 
-Если всё сделали правильно, то после успешной сборки проекта вы сможете использовать автодополнение.
+```bash
+find build-asan -type f -executable -name "*test*"
+```
 
-![Скриншот 2](misc/clangd_1.png)
+## ASAN-проверка leak_example.cpp
 
-![Скриншот 3](misc/clangd_2.png)
+### До рефакторинга
+
+```bash
+mkdir -p analysis_artifacts
+
+cp tests/tests_data/leak_example.cpp analysis_artifacts/leak_before.cpp
+
+clang++-19 -std=c++17 -O0 -g \
+  -fsanitize=address \
+  -fno-omit-frame-pointer \
+  analysis_artifacts/leak_before.cpp \
+  -o analysis_artifacts/leak_before
+
+ASAN_OPTIONS=detect_leaks=1:new_delete_type_mismatch=0 \
+  ./analysis_artifacts/leak_before
+```
+
+### После рефакторинга
+
+```bash
+cp tests/tests_data/leak_example.cpp analysis_artifacts/leak_after.cpp
+
+./build/src/refactor_tool analysis_artifacts/leak_after.cpp -- -std=c++17
+
+clang++-19 -std=c++17 -O0 -g \
+  -fsanitize=address \
+  -fno-omit-frame-pointer \
+  analysis_artifacts/leak_after.cpp \
+  -o analysis_artifacts/leak_after
+
+ASAN_OPTIONS=detect_leaks=1 ./analysis_artifacts/leak_after
+```
+
+## perf-проверка perf_example.cpp
+
+### До рефакторинга
+
+```bash
+mkdir -p analysis_artifacts
+
+cp tests/tests_data/perf_example.cpp analysis_artifacts/perf_before.cpp
+
+clang++-19 -std=c++17 -O2 -g \
+  -fno-omit-frame-pointer \
+  analysis_artifacts/perf_before.cpp \
+  -o analysis_artifacts/perf_before
+
+perf stat ./analysis_artifacts/perf_before
+```
+
+### После рефакторинга
+
+```bash
+cp tests/tests_data/perf_example.cpp analysis_artifacts/perf_after.cpp
+
+./build/src/refactor_tool analysis_artifacts/perf_after.cpp -- -std=c++17
+
+clang++-19 -std=c++17 -O2 -g \
+  -fno-omit-frame-pointer \
+  analysis_artifacts/perf_after.cpp \
+  -o analysis_artifacts/perf_after
+
+perf stat ./analysis_artifacts/perf_after
+```
+

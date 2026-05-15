@@ -1,8 +1,10 @@
 # Folders
 *.cache/
 *build/
+*build*
 .idea/
 .vs/
+analysis_artifacts/
 
 # Files
 CMakeUserPresets.json
