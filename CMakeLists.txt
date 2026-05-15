@@ -78,6 +78,19 @@ if(NOT CMAKE_BUILD_TYPE)
       STRING "Build type (default Debug):" FORCE)
 endif()
 
+option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
+
+if(ENABLE_ASAN)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    message(STATUS "AddressSanitizer enabled")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+  else()
+    message(WARNING "ENABLE_ASAN is supported only for Clang/GCC")
+  endif()
+endif()
+
+
 # Compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall\
     -fdiagnostics-color=always")
@@ -105,6 +118,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 # Doing this at the end so that all definitions and link/include paths are
 # available for the sub-projects.
 #===============================================================================
+include(CTest)
+enable_testing()
+
 add_subdirectory(tests)
 add_subdirectory(src)
 

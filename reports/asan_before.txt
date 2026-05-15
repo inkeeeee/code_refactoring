@@ -1,0 +1,13 @@
+
+=================================================================
+==13680==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 4000 byte(s) in 1 object(s) allocated from:
+    #0 0x6048f9b41921 in operator new[](unsigned long) (/home/inke/forcodes/for-coding/yandex/code_refactoring/analysis_artifacts/leak_before+0x10d921) (BuildId: cf1134333ad4517062be747ca258686317d4332e)
+    #1 0x6048f9b43d2d in Derived::Derived() /home/inke/forcodes/for-coding/yandex/code_refactoring/analysis_artifacts/leak_before.cpp:10:24
+    #2 0x6048f9b43ca7 in main /home/inke/forcodes/for-coding/yandex/code_refactoring/analysis_artifacts/leak_before.cpp:18:21
+    #3 0x7e76c6e2a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #4 0x7e76c6e2a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #5 0x6048f9a60354 in _start (/home/inke/forcodes/for-coding/yandex/code_refactoring/analysis_artifacts/leak_before+0x2c354) (BuildId: cf1134333ad4517062be747ca258686317d4332e)
+
+SUMMARY: AddressSanitizer: 4000 byte(s) leaked in 1 allocation(s).

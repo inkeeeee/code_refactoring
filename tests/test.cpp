@@ -46,6 +46,22 @@ std::string shellQuote(const fs::path &path) {
 }
 
 fs::path findRefactorTool() {
+    if (const char *envPath = std::getenv("REFACTOR_TOOL_PATH")) {
+        fs::path path = envPath;
+        if (fs::exists(path)) {
+            return path;
+        }
+    }
+
+#ifdef REFACTOR_TOOL_PATH
+    {
+        fs::path path = REFACTOR_TOOL_PATH;
+        if (fs::exists(path)) {
+            return path;
+        }
+    }
+#endif
+
 #ifdef _WIN32
     const std::string toolName = "refactor_tool.exe";
 #else
@@ -55,19 +71,20 @@ fs::path findRefactorTool() {
     const fs::path cwd = fs::current_path();
 
     const std::vector<fs::path> candidates = {
-        cwd / "build" / "src" / toolName,
-        cwd / "build" / toolName,
         cwd / toolName,
-
         cwd / "src" / toolName,
-        cwd.parent_path() / "build" / "src" / toolName,
-        cwd.parent_path() / "build" / toolName,
-        cwd.parent_path() / toolName,
+        cwd / "build" / toolName,
+        cwd / "build" / "src" / toolName,
 
+        cwd.parent_path() / toolName,
         cwd.parent_path() / "src" / toolName,
-        cwd.parent_path().parent_path() / "build" / "src" / toolName,
-        cwd.parent_path().parent_path() / "build" / toolName,
+        cwd.parent_path() / "build" / toolName,
+        cwd.parent_path() / "build" / "src" / toolName,
+
         cwd.parent_path().parent_path() / toolName,
+        cwd.parent_path().parent_path() / "src" / toolName,
+        cwd.parent_path().parent_path() / "build" / toolName,
+        cwd.parent_path().parent_path() / "build" / "src" / toolName,
     };
 
     for (const auto &candidate : candidates) {
@@ -76,7 +93,9 @@ fs::path findRefactorTool() {
         }
     }
 
-    return cwd / "build" / "src" / toolName;
+    ADD_FAILURE() << "refactor_tool was not found. Current directory: " << cwd.string();
+
+    return cwd / toolName;
 }
 
 fs::path makeTempDir() {
@@ -94,7 +113,8 @@ std::string runRefactor(const std::string &source) {
     const fs::path tool = findRefactorTool();
 
     if (!fs::exists(tool)) {
-        ADD_FAILURE() << "refactor_tool executable was not found: " << tool.string();
+        ADD_FAILURE() << "refactor_tool executable was not found: " << tool.string()
+                      << "\nRun:\nfind build -type f -executable -name refactor_tool";
         return source;
     }
 
@@ -104,8 +124,14 @@ std::string runRefactor(const std::string &source) {
 
     writeFile(sourcePath, source);
 
+#ifndef _WIN32
+    const std::string asanEnv = "ASAN_OPTIONS=detect_leaks=0:allow_user_poisoning=0 ";
+#else
+    const std::string asanEnv;
+#endif
+
     const std::string command =
-        shellQuote(tool) + " " + shellQuote(sourcePath) + " -- -std=c++17 > " + shellQuote(logPath) + " 2>&1";
+        asanEnv + shellQuote(tool) + " " + shellQuote(sourcePath) + " -- -std=c++17 > " + shellQuote(logPath) + " 2>&1";
 
     const int exitCode = std::system(command.c_str());
     EXPECT_EQ(exitCode, 0) << readFile(logPath);
